@@ -10,6 +10,7 @@ import type {
 import { getPracticeArticleCacheLocal, getPracticeWordCacheLocal } from '../utils/cache'
 import { useDataSyncPersistence } from './useDataSyncPersistence'
 import dayjs from 'dayjs'
+import { normalizeLegacyWordKey, practiceEntityKey } from '../lexicon'
 
 type DayGroup = { firstStart: number; totalSpend: number; daySegments: [number, number][] }
 
@@ -77,13 +78,34 @@ function isCompactPracticeWordCache(data: PracticeWordCacheStored | null): data 
   return !!data && 'taskWordsStr' in data
 }
 
+/**
+ * New cache entries use practiceEntityKey. Legacy cache entries used the exact
+ * display word. Both are indexed here; lowercase fallback is added only when
+ * it is unambiguous inside the current dictionary.
+ */
 function createWordMap(): Map<string, Word> {
   const store = useBaseStore()
-  return new Map(store.sdict.words.map(word => [word.word, word]))
+  const map = new Map<string, Word>()
+  const lowercaseGroups = new Map<string, Word[]>()
+
+  for (const word of store.sdict.words) {
+    map.set(practiceEntityKey(word), word)
+    map.set(word.word, word)
+    const key = normalizeLegacyWordKey(word.word)
+    const group = lowercaseGroups.get(key) ?? []
+    group.push(word)
+    lowercaseGroups.set(key, group)
+  }
+
+  for (const [key, group] of lowercaseGroups) {
+    const identities = new Set(group.map(practiceEntityKey))
+    if (identities.size === 1) map.set(key, group[0])
+  }
+  return map
 }
 
-function restoreWords(words: string[], wordMap: Map<string, Word>): Word[] {
-  return words.map(word => wordMap.get(word)).filter((word): word is Word => !!word)
+function restoreWords(keys: string[], wordMap: Map<string, Word>): Word[] {
+  return keys.map(key => wordMap.get(key)).filter((word): word is Word => !!word)
 }
 
 function serializePracticeWordCache(data: PracticeWordCache | null): PracticeWordCacheStored | null {
@@ -91,13 +113,13 @@ function serializePracticeWordCache(data: PracticeWordCache | null): PracticeWor
   const { words, wrongWords, ...practiceDataRest } = data.practiceData
   return {
     taskWordsStr: {
-      new: data.taskWords.new.map(v => v.word),
-      review: data.taskWords.review.map(v => v.word),
+      new: data.taskWords.new.map(practiceEntityKey),
+      review: data.taskWords.review.map(practiceEntityKey),
     },
     practiceData: {
       ...practiceDataRest,
-      wordsStr: words.map(v => v.word),
-      wrongWordsStr: wrongWords.map(v => v.word),
+      wordsStr: words.map(practiceEntityKey),
+      wrongWordsStr: wrongWords.map(practiceEntityKey),
     },
     statStoreData: data.statStoreData,
   }
