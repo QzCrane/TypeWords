@@ -172,10 +172,22 @@ export function resolveFsrsCardEntry(
 ): { key: string; card: Card; legacy: boolean } | null {
   const stableKey = spellingCardKey(word)
   const stableCard = fsrsData[stableKey]
-  if (stableCard) return { key: stableKey, card: stableCard, legacy: false }
+  const hasLexiconIdentity = !!(word.lexicalUnitId || word.lexiconMeta?.lexicalUnitId)
+  const ambiguous = hasLexiconIdentity && isLegacyKeyAmbiguous(migrationState, word)
 
-  if ((word.lexicalUnitId || word.lexiconMeta?.lexicalUnitId) && isLegacyKeyAmbiguous(migrationState, word)) return null
+  if (stableCard) {
+    if (!ambiguous) {
+      const legacy = findLegacyCard(fsrsData, word)
+      if (legacy && cardRevisionTime(legacy.card) > cardRevisionTime(stableCard)) {
+        fsrsData[stableKey] = { ...legacy.card }
+        if (migrationState) migrationState.copiedLegacyKeys[legacy.key] = stableKey
+        return { key: stableKey, card: fsrsData[stableKey], legacy: false }
+      }
+    }
+    return { key: stableKey, card: stableCard, legacy: false }
+  }
 
+  if (ambiguous) return null
   const legacy = findLegacyCard(fsrsData, word)
   return legacy ? { key: legacy.key, card: legacy.card, legacy: true } : null
 }
