@@ -2,8 +2,11 @@ import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import readline from 'node:readline'
+import { fileURLToPath } from 'node:url'
 
-const root = path.resolve('apps/nuxt/public/typewords_lexicon_v2')
+const scriptDir = path.dirname(fileURLToPath(import.meta.url))
+const repositoryRoot = path.resolve(scriptDir, '..')
+const root = path.join(repositoryRoot, 'apps/nuxt/public/typewords_lexicon_v2')
 const sequencePath = path.join(root, 'learning_sequence.csv')
 const sourcesPath = path.join(root, 'sources_by_unit.jsonl')
 const correctionsPath = path.join(root, 'corrections.v1.json')
@@ -158,8 +161,6 @@ for (const [stage, entries] of stageEntries) {
     path.join(stagesRoot, `${stage}.json`),
     JSON.stringify({ schemaVersion: 2, stage, count: entries.length, entries })
   )
-
-  // Keep the legacy text import path correct, but derive it from the canonical sequence.
   fs.writeFileSync(path.join(importRoot, `${stage}.txt`), `${entries.map(entry => entry.displayForm).join('\n')}\n`)
   catalog.push({
     id: stage,
@@ -202,7 +203,6 @@ for await (const line of lines) {
     existing.canonicalForm = raw.canonicalForm
     existing.displayForm = raw.displayForm
   }
-
   existing.sources.push(...(Array.isArray(raw.sources) ? raw.sources : []))
   sourceRecords.set(unitId, existing)
 }
