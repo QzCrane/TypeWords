@@ -10,16 +10,18 @@ import { useRuntimeStore } from '../stores/runtime.ts'
 import { useRoute, useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { computed } from 'vue'
+import { hasFsrsCard, practiceEntityKey, resolveFsrsCardEntry } from '../lexicon'
 
 export function useWordOptions() {
   const store = useBaseStore()
+  const sameWordEntity = (left: Word, right: Word) => practiceEntityKey(left) === practiceEntityKey(right)
 
   function isWordCollect(val: Word) {
-    return !!store.collectWord.words.find(v => v.word.toLowerCase() === val.word.toLowerCase())
+    return !!store.collectWord.words.find(v => sameWordEntity(v, val))
   }
 
   function toggleWordCollect(val: Word) {
-    let rIndex = store.collectWord.words.findIndex(v => v.word.toLowerCase() === val.word.toLowerCase())
+    let rIndex = store.collectWord.words.findIndex(v => sameWordEntity(v, val))
     if (rIndex > -1) {
       store.collectWord.words.splice(rIndex, 1)
     } else {
@@ -29,11 +31,11 @@ export function useWordOptions() {
   }
 
   function isWordSimple(val: Word) {
-    return !!store.knownWordsSet.has(val.word.toLowerCase())
+    return store.knownEntityKeysSet.has(practiceEntityKey(val))
   }
 
   function toggleWordSimple(val: Word) {
-    let rIndex = store.knownWords.findIndex(v => v === val.word.toLowerCase())
+    let rIndex = store.known.words.findIndex(v => sameWordEntity(v, val))
     if (rIndex > -1) {
       store.known.words.splice(rIndex, 1)
     } else {
@@ -43,7 +45,7 @@ export function useWordOptions() {
   }
 
   function delWrongWord(val: Word) {
-    let rIndex = store.wrong.words.findIndex(v => v.word.toLowerCase() === val.word.toLowerCase())
+    let rIndex = store.wrong.words.findIndex(v => sameWordEntity(v, val))
     if (rIndex > -1) {
       store.wrong.words.splice(rIndex, 1)
     }
@@ -51,7 +53,7 @@ export function useWordOptions() {
   }
 
   function delSimpleWord(val: Word) {
-    let rIndex = store.known.words.findIndex(v => v.word.toLowerCase() === val.word.toLowerCase())
+    let rIndex = store.known.words.findIndex(v => sameWordEntity(v, val))
     if (rIndex > -1) {
       store.known.words.splice(rIndex, 1)
     }
@@ -72,7 +74,7 @@ export function useWordOptions() {
 
   function addWordToDict(val: Word, dict: Dict): { ok: boolean } {
     const target = resolveDictInBookList(dict)
-    const rIndex = target.words.findIndex(v => v.word.toLowerCase() === val.word.toLowerCase())
+    const rIndex = target.words.findIndex(v => sameWordEntity(v, val))
     if (rIndex > -1) return { ok: false }
     target.words.push(val)
     target.length = target.words.length
@@ -151,8 +153,9 @@ export function getCurrentStudyWord(): TaskWords {
 
   if (words?.length) {
     const settingStore = useSettingStore()
-    //忽略列表：简单词或已掌握
-    const ignoreSet = [store.allIgnoreWordsSet, store.knownWordsSet][settingStore.ignoreSimpleWord ? 0 : 1]
+    // Ignoring and mastery now use stable entity identity when available.
+    const ignoreSet = [store.allIgnoreEntityKeysSet, store.knownEntityKeysSet][settingStore.ignoreSimpleWord ? 0 : 1]
+    const isIgnored = (item: Word) => ignoreSet.has(practiceEntityKey(item))
     const perDay = dict.perDayStudyNumber
     const start = isTest ? 1 : dict.lastLearnIndex
     const complete = isTest ? true : dict.complete
@@ -165,7 +168,7 @@ export function getCurrentStudyWord(): TaskWords {
       for (let i = start; i < words.length; i++) {
         let item = words[i]
         if (data.new.length >= perDay) break
-        if (!ignoreSet.has(item.word)) {
+        if (!isIgnored(item)) {
           data.new.push(item)
         }
         end++
@@ -174,55 +177,47 @@ export function getCurrentStudyWord(): TaskWords {
 
     //如果复习比大于等于1，或者已完成，才生成复习词
     if (reviewRatio >= 1 || complete || isEnd) {
-      //Map建立索引，用于查找、包含
-      const wordMap = new Map(words.map(s => [s.word, s]))
-      //复习总数量;如果已结束那么复习比最小是1
       const totalNeed = perDay * (isEnd ? reviewRatio || 1 : reviewRatio)
       const now = Date.now()
+      const newEntityKeys = new Set(data.new.map(practiceEntityKey))
+      const due: Array<{ word: Word; cardKey: string; due: number; legacy: boolean }> = []
 
-      let waitRemoveFromFsrsData = []
+      for (const item of words) {
+        const entityKey = practiceEntityKey(item)
+        const cardEntry = resolveFsrsCardEntry(store.fsrsData, item, store.fsrsMigration)
+        if (!cardEntry) continue
 
-      //取 due 到期的单词
-      let reviewWordStrList = Object.entries(store.fsrsData)
-        .filter(([word, card]) => {
-          //1、这里的due字段被json序列化之后又恢复是字符串了，所以要用dayjs比较
-          //2、要在当前学习这本词典里面
-          //3、不在新词里面
-          // console.log(`单词：${word},到期时间：${dayjs(card.due).format('YYYY-MM-DD HH:mm:ss')}`)
-          let isMastered = ignoreSet.has(word)
-          if (isMastered) {
-            waitRemoveFromFsrsData.push(word)
-          }
-          return (
-            !isMastered && dayjs(card.due).valueOf() <= now && wordMap.has(word) && !data.new.find(v => v.word === word)
-          )
-        })
-        .sort((a, b) => dayjs(a[1].due).valueOf() - dayjs(b[1].due).valueOf())
-        .map(([word]) => word)
+        if (isIgnored(item)) {
+          // Stable cards belong to this entity and may be removed after mastery.
+          // Legacy keys remain for rollback and old non-lexicon dictionaries.
+          if (!cardEntry.legacy) delete store.fsrsData[cardEntry.key]
+          continue
+        }
+        if (newEntityKeys.has(entityKey)) continue
 
-      waitRemoveFromFsrsData.map(word => {
-        delete store.fsrsData[word]
-      })
-      // console.log('fsrs 里 due 到期单词', reviewWordStrList)
+        const dueAt = dayjs(cardEntry.card.due).valueOf()
+        if (dueAt <= now) {
+          due.push({ word: item, cardKey: cardEntry.key, due: dueAt, legacy: cardEntry.legacy })
+        }
+      }
 
-      data.review = shuffle(
-        reviewWordStrList
-          .slice(0, totalNeed)
-          .map(word => wordMap.get(word))
-          .filter(obj => obj)
-      )
+      due.sort((a, b) => a.due - b.due)
+      data.review = shuffle(due.slice(0, totalNeed).map(item => item.word))
+
       //如果数量不够再填充
       if (data.review.length < totalNeed) {
-        // 固定填充逻辑
         let list = words.slice(0, start).reverse()
         if (complete) list = list.concat(words.slice(end).reverse())
-        // 固定填充复习词需要过滤掉有FSRS记录的
-        let set = new Set(
-          Array.from(ignoreSet)
-            .concat(Object.keys(store.fsrsData))
-            .concat(data.new.map(v => v.word))
-        )
-        list = list.filter(item => !set.has(item.word))
+        const reviewEntityKeys = new Set(data.review.map(practiceEntityKey))
+        list = list.filter(item => {
+          const entityKey = practiceEntityKey(item)
+          return (
+            !ignoreSet.has(entityKey) &&
+            !newEntityKeys.has(entityKey) &&
+            !reviewEntityKeys.has(entityKey) &&
+            !hasFsrsCard(store.fsrsData, item, store.fsrsMigration)
+          )
+        })
         data.review = data.review.concat(list.slice(0, totalNeed - data.review.length))
       }
     }
@@ -276,12 +271,7 @@ export function useGetDict() {
       if (!dict) dict = dict_list.flat().find(v => isDictIdMatch(v, dictId)) as Dict
     }
     if (dict && dict.id) {
-      if (
-        !dict?.articles?.length &&
-        !dict?.custom &&
-        !dict?.system &&
-        !dict?.is_default
-      ) {
+      if (!dict?.articles?.length && !dict?.custom && !dict?.system && !dict?.is_default) {
         fetching = true
         let r = await _getDictDataByUrl(dict, DictType.article)
         runtimeStore.editDict = r
