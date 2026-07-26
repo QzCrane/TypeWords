@@ -11,6 +11,7 @@
     "build-dev-web": "pnpm -F @typewords/nuxt generate-dev",
     "build-vscode-web": "pnpm -F @typewords/vscode-web build",
     "dev-vscode-web": "pnpm -F @typewords/vscode-web dev",
+    "zip-db": "node scripts/zip-lexicon.mjs",
     "test": ""
   },
   "dependencies": {
