@@ -30,6 +30,10 @@ async function getDictDetail(val: DictResource) {
   nav('/dict', { from: 'list' })
 }
 
+function goLexicon() {
+  nav('/lexicon')
+}
+
 function groupByDictTags(dictList: DictResource[]) {
   return dictList.reduce<Record<string, DictResource[]>>((result, dict) => {
     dict.tags.forEach(tag => {
@@ -52,8 +56,6 @@ const groupedByCategoryAndTag = $computed(() => {
   for (const [key, value] of Object.entries(groupByCategory)) {
     data.push([key, groupByDictTags(value)])
   }
-  // ;[data[2], data[3]] = [data[3], data[2]]
-  // console.log('data', data)
   return data
 })
 
@@ -118,13 +120,26 @@ watch(dict_list, val => {
           <BaseInput clearable placeholder="请输入词典名称/缩写/类别" v-model="searchKey" class="flex-1" autofocus />
           <BaseButton @click="((showSearchInput = false), (searchKey = ''))">{{ $t('cancel') }}</BaseButton>
         </div>
-        <div class="py-1 flex flex-1 justify-end" v-else>
+        <div class="py-1 flex flex-1 items-center justify-end gap-2" v-else>
           <span class="page-title absolute w-full center">{{ $t('dict_list') }}</span>
+          <BaseButton class="z-1" @click="goLexicon">学习顺序</BaseButton>
           <BaseIcon :title="$t('search')" @click="showSearchInput = true" class="z-1" icon="fluent:search-24-regular">
             <IconFluentSearch24Regular />
           </BaseIcon>
         </div>
       </div>
+
+      <div
+        v-if="!searchKey"
+        class="mt-4 cursor-pointer rounded-xl border border-solid border-blue-200 bg-blue-50 p-4 transition hover:-translate-y-px dark:border-blue-800 dark:bg-blue-950/40"
+        @click="goLexicon"
+      >
+        <div class="font-bold text-blue-800 dark:text-blue-100">Lexicon v2：按学习价值而不是按词书重复背</div>
+        <div class="mt-1 text-sm text-blue-700/80 dark:text-blue-200/80">
+          浏览 S0–S6，保留规范化实体、来源、质量状态和先修关系，一键导入阶段词典。
+        </div>
+      </div>
+
       <div class="mt-4" v-if="searchKey">
         <DictList
           v-if="searchList.length"
@@ -173,7 +188,8 @@ watch(dict_list, val => {
         }
       }
 
-      .py-1.flex.flex-1.justify-end {
+      .py-1.flex.flex-1.justify-end,
+      .py-1.flex.flex-1.items-center.justify-end {
         width: 100%;
 
         .page-title {
@@ -209,7 +225,8 @@ watch(dict_list, val => {
         }
       }
 
-      .py-1.flex.flex-1.justify-end {
+      .py-1.flex.flex-1.justify-end,
+      .py-1.flex.flex-1.items-center.justify-end {
         .page-title {
           font-size: 1rem;
         }
