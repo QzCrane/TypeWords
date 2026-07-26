@@ -10,7 +10,18 @@ const correctionsPath = path.join(root, 'corrections.v1.json')
 const outputRoot = path.join(root, 'runtime')
 const stagesRoot = path.join(outputRoot, 'stages')
 const sourcesRoot = path.join(outputRoot, 'sources')
+const importRoot = path.join(root, 'typewords_import')
 const prefixLength = 2
+
+const stageDisplayNames = {
+  S0_foundation_automatic: 'S0 基础自动化',
+  S1_core_automatic: 'S1 主动核心',
+  S2_general_active: 'S2 通用主动扩展',
+  S3_academic_technical_active: 'S3 学术与技术主动词',
+  S4_broad_receptive: 'S4 广泛流畅识别',
+  S5_specialized_contextual: 'S5 专项语境识别',
+  S6_on_demand: 'S6 按需学习',
+}
 
 for (const required of [sequencePath, sourcesPath]) {
   if (!fs.existsSync(required)) throw new Error(`[lexicon-runtime] Missing required file: ${required}`)
@@ -35,12 +46,8 @@ function parseCsv(text) {
         if (text[i + 1] === '"') {
           field += '"'
           i++
-        } else {
-          quoted = false
-        }
-      } else {
-        field += char
-      }
+        } else quoted = false
+      } else field += char
       continue
     }
 
@@ -94,6 +101,7 @@ function sourcePrefix(unitId) {
 fs.rmSync(outputRoot, { recursive: true, force: true })
 fs.mkdirSync(stagesRoot, { recursive: true })
 fs.mkdirSync(sourcesRoot, { recursive: true })
+fs.mkdirSync(importRoot, { recursive: true })
 
 const { unitOverrides } = readCorrections()
 const aliases = Object.fromEntries(
@@ -111,8 +119,7 @@ const unitsById = new Map()
 
 for (const row of dataRows) {
   const rawUnitId = get(row, 'lexicalUnitId')
-  if (!rawUnitId) continue
-  if (aliases[rawUnitId]) continue
+  if (!rawUnitId || aliases[rawUnitId]) continue
 
   const entry = {
     lexicalUnitId: rawUnitId,
@@ -136,18 +143,38 @@ for (const row of dataRows) {
 
   unitsById.set(rawUnitId, entry)
   if (!entry.independentStudy || entry.learningStage === 'Q0_cleanup') continue
+  if (/[\r\n\u0000]/.test(entry.displayForm)) {
+    throw new Error(`[lexicon-runtime] Uncorrected control character in ${entry.lexicalUnitId}: ${JSON.stringify(entry.displayForm)}`)
+  }
   const entries = stageEntries.get(entry.learningStage) ?? []
   entries.push(entry)
   stageEntries.set(entry.learningStage, entries)
 }
 
+const catalog = []
 for (const [stage, entries] of stageEntries) {
   entries.sort((a, b) => a.independentRank - b.independentRank || b.priorityScore - a.priorityScore)
   fs.writeFileSync(
     path.join(stagesRoot, `${stage}.json`),
     JSON.stringify({ schemaVersion: 2, stage, count: entries.length, entries })
   )
+
+  // Keep the legacy text import path correct, but derive it from the canonical sequence.
+  fs.writeFileSync(path.join(importRoot, `${stage}.txt`), `${entries.map(entry => entry.displayForm).join('\n')}\n`)
+  catalog.push({
+    id: stage,
+    name: stageDisplayNames[stage] ?? stage,
+    url: `${stage}.txt`,
+    runtimeUrl: `../runtime/stages/${stage}.json`,
+    length: entries.length,
+    language: 'en',
+    translateLanguage: 'zh-CN',
+    source: 'typewords-lexicon-v2',
+  })
 }
+
+catalog.sort((a, b) => a.id.localeCompare(b.id))
+fs.writeFileSync(path.join(importRoot, 'catalog.json'), JSON.stringify(catalog, null, 2))
 
 const sourceRecords = new Map()
 const input = fs.createReadStream(sourcesPath, { encoding: 'utf8' })
@@ -221,7 +248,7 @@ const manifest = {
   schemaVersion: 2,
   generatedAt: new Date().toISOString(),
   sourceHash,
-  sequenceCount: unitsById.size - Object.keys(aliases).length,
+  sequenceCount: unitsById.size,
   rawSourceUnitCount,
   sourceUnitCount: sourceRecords.size,
   stages,
