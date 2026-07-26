@@ -20,6 +20,7 @@ export interface FsrsMigrationState {
 
 export interface FsrsMigrationResult {
   copied: number
+  updated: number
   skippedExisting: number
   conflicts: FsrsMigrationConflict[]
 }
@@ -42,6 +43,13 @@ function lexicalUnitId(word: LexiconAwareWord): string {
 
 function stableSpellingCardKey(word: LexiconAwareWord): string {
   return `${lexicalUnitId(word)}#spelling#${legacyKey(word.word)}`
+}
+
+function cardRevisionTime(card: Card | undefined): number {
+  if (!card) return 0
+  const lastReview = card.last_review ? new Date(card.last_review).getTime() : 0
+  const due = card.due ? new Date(card.due).getTime() : 0
+  return Math.max(Number.isFinite(lastReview) ? lastReview : 0, Number.isFinite(due) ? due : 0)
 }
 
 export function practiceEntityKey(word: LexiconAwareWord): string {
@@ -88,6 +96,8 @@ function findLegacyCard(fsrsData: Record<string, Card>, word: Word): { key: stri
  * Copies unambiguous legacy word-string cards into stable spelling-card IDs.
  * Legacy cards are intentionally retained for old dictionaries and rollback.
  * Ambiguous lowercase keys (for example US/us) are never guessed.
+ * If both keys exist, only the newer legacy revision is mirrored; a newer
+ * stable card is never overwritten by stale compatibility data.
  */
 export function migrateLegacySpellingCards(
   fsrsData: Record<string, Card>,
@@ -97,6 +107,7 @@ export function migrateLegacySpellingCards(
   const groups = buildLegacyKeyGroups(words)
   const conflicts: FsrsMigrationConflict[] = []
   let copied = 0
+  let updated = 0
   let skippedExisting = 0
 
   migrationState.version = FSRS_CARD_STATE_VERSION
@@ -118,20 +129,28 @@ export function migrateLegacySpellingCards(
 
     const word = group[0]
     const stableKey = stableSpellingCardKey(word)
-    if (fsrsData[stableKey]) {
-      skippedExisting++
+    const legacy = findLegacyCard(fsrsData, word)
+    if (!legacy) continue
+
+    const stable = fsrsData[stableKey]
+    if (!stable) {
+      fsrsData[stableKey] = { ...legacy.card }
+      migrationState.copiedLegacyKeys[legacy.key] = stableKey
+      copied++
       continue
     }
 
-    const legacy = findLegacyCard(fsrsData, word)
-    if (!legacy) continue
-    fsrsData[stableKey] = { ...legacy.card }
-    migrationState.copiedLegacyKeys[legacy.key] = stableKey
-    copied++
+    if (cardRevisionTime(legacy.card) > cardRevisionTime(stable)) {
+      fsrsData[stableKey] = { ...legacy.card }
+      migrationState.copiedLegacyKeys[legacy.key] = stableKey
+      updated++
+    } else {
+      skippedExisting++
+    }
   }
 
   migrationState.lastRunAt = Date.now()
-  return { copied, skippedExisting, conflicts }
+  return { copied, updated, skippedExisting, conflicts }
 }
 
 export function migrateBookListSpellingCards(
