@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { BasePage, Toast } from '@typewords/base'
 import Header from '@typewords/core/components/Header.vue'
@@ -22,12 +22,12 @@ function runtimeUrl(relative: string) {
   return withAppBaseURL(`/typewords_lexicon_v2/runtime/${relative}`)
 }
 
-async function findLearningEntry(currentManifest: LexiconRuntimeManifest) {
+async function findLearningEntry(currentManifest: LexiconRuntimeManifest, targetId: string) {
   for (const stage of Object.keys(currentManifest.stages ?? {})) {
     const response = await fetch(runtimeUrl(`stages/${stage}.json`))
     if (!response.ok) continue
     const payload = await response.json()
-    const found = (payload.entries ?? []).find((item: LearningSequenceEntry) => item.lexicalUnitId === lexicalUnitId)
+    const found = (payload.entries ?? []).find((item: LearningSequenceEntry) => item.lexicalUnitId === targetId)
     if (found) return found as LearningSequenceEntry
   }
   return null
@@ -40,7 +40,8 @@ async function loadDetail() {
     if (!manifestResponse.ok) throw new Error('Lexicon 运行时索引不存在')
     manifest.value = await manifestResponse.json()
 
-    const effectiveId = manifest.value?.aliases?.[lexicalUnitId] ?? lexicalUnitId
+    const manifestWithAliases = manifest.value as LexiconRuntimeManifest & { aliases?: Record<string, string> }
+    const effectiveId = manifestWithAliases.aliases?.[lexicalUnitId] ?? lexicalUnitId
     const prefix = sourceShardPrefix(effectiveId, manifest.value?.sourceShardPrefixLength ?? 2)
     const sourceResponse = await fetch(runtimeUrl(`sources/${prefix}.json`))
     if (!sourceResponse.ok) throw new Error(`无法加载来源分片 ${prefix}`)
@@ -48,7 +49,7 @@ async function loadDetail() {
     sourceRecord.value =
       (sourcePayload.records ?? []).find((item: LexiconSourceRecord) => item.lexicalUnitId === effectiveId) ?? null
 
-    entry.value = await findLearningEntry(manifest.value as LexiconRuntimeManifest)
+    entry.value = await findLearningEntry(manifest.value as LexiconRuntimeManifest, effectiveId)
     if (!sourceRecord.value) throw new Error(`未找到实体来源：${effectiveId}`)
   } catch (error: any) {
     Toast.error(error?.message || '加载词汇详情失败')
@@ -58,7 +59,11 @@ async function loadDetail() {
 }
 
 onMounted(loadDetail)
-useHead({ title: sourceRecord.value?.displayForm ? `${sourceRecord.value.displayForm} · Lexicon` : 'Lexicon 详情' })
+useHead(
+  computed(() => ({
+    title: sourceRecord.value?.displayForm ? `${sourceRecord.value.displayForm} · Lexicon` : 'Lexicon 详情',
+  }))
+)
 </script>
 
 <template>
