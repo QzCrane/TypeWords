@@ -66,4 +66,16 @@ jobs:
         run: pnpm lexicon:check
 
       - name: Build Nuxt application
-        run: pnpm -F @typewords/nuxt build
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm -F @typewords/nuxt build 2>&1 | tee nuxt-build.log
+
+      - name: Upload failed Nuxt build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lexicon-nuxt-build-log
+          path: nuxt-build.log
+          if-no-files-found: ignore
+          retention-days: 7
