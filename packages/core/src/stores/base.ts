@@ -7,6 +7,13 @@ import { AppEnv, DictId, IS_DEV, SAVE_DICT_KEY } from '../config/env'
 import { add2MyDict, dictListVersion, myDictList } from '../apis'
 import { Toast } from '@typewords/base'
 import type { Card } from 'ts-fsrs'
+import {
+  getDefaultFsrsMigrationState,
+  migrateBookListSpellingCards,
+  migrateLegacySpellingCards,
+  practiceEntityKey,
+  type FsrsMigrationState,
+} from '../lexicon'
 
 export interface BaseState {
   simpleWords: string[]
@@ -21,6 +28,7 @@ export interface BaseState {
   }
   dictListVersion: number
   fsrsData: Record<string, Card>
+  fsrsMigration: FsrsMigrationState
   noteData: Record<string, string> // 集中存储单词笔记，key 为单词字符串
   _ignoreWatch: boolean //忽略监听，避免重复保存和上传
 }
@@ -91,6 +99,7 @@ export const getDefaultBaseState = (): BaseState => ({
   },
   dictListVersion: 1,
   fsrsData: {},
+  fsrsMigration: getDefaultFsrsMigrationState(),
   noteData: {},
   _ignoreWatch: false,
 })
@@ -113,11 +122,14 @@ export const useBaseStore = defineStore('base', {
       return res ?? getDefaultDict()
     },
     known(): Dict {
-      let res =  this.word.bookList.find(v => [v.enName, v.id].includes(DictId.wordKnown))
+      let res = this.word.bookList.find(v => [v.enName, v.id].includes(DictId.wordKnown))
       return res ?? getDefaultDict()
     },
     knownWords(): string[] {
       return this.known.words.map((v: Word) => v.word.toLowerCase())
+    },
+    knownEntityKeysSet(): Set<string> {
+      return new Set<string>(this.known.words.map((v: Word) => practiceEntityKey(v)))
     },
     allIgnoreWords(): string[] {
       return this.known.words
@@ -129,6 +141,12 @@ export const useBaseStore = defineStore('base', {
     },
     allIgnoreWordsSet(): Set<string> {
       return new Set<string>(this.known.words.map((v: Word) => v.word).concat(this.simpleWords.map((v: string) => v)))
+    },
+    allIgnoreEntityKeysSet(): Set<string> {
+      return new Set<string>([
+        ...this.known.words.map((v: Word) => practiceEntityKey(v)),
+        ...this.simpleWords.map((word: string) => `legacy:${word.trim().normalize('NFKC').toLocaleLowerCase()}`),
+      ])
     },
     sdict(): Dict {
       if (this.word.studyIndex >= 0) {
@@ -164,7 +182,18 @@ export const useBaseStore = defineStore('base', {
     },
   },
   actions: {
+    migrateLexiconFsrsCards(words?: Word[]) {
+      if (!this.fsrsMigration) this.fsrsMigration = getDefaultFsrsMigrationState()
+      if (words?.length) return migrateLegacySpellingCards(this.fsrsData, words, this.fsrsMigration)
+      return migrateBookListSpellingCards(this.fsrsData, this.word.bookList, this.fsrsMigration)
+    },
     setState(obj: BaseState) {
+      if (!obj.fsrsData || typeof obj.fsrsData !== 'object') obj.fsrsData = {}
+      if (!obj.fsrsMigration || typeof obj.fsrsMigration !== 'object') {
+        obj.fsrsMigration = getDefaultFsrsMigrationState()
+      }
+      migrateBookListSpellingCards(obj.fsrsData, obj.word.bookList, obj.fsrsMigration)
+
       obj.word.bookList.map(book => {
         book.words = shallowReactive(book.words)
         book.articles = shallowReactive(book.articles)
@@ -207,7 +236,6 @@ export const useBaseStore = defineStore('base', {
                 Object.assign(result.val, res.data)
               }
             }
-            // console.log('data', data)
             this.setState(result.val)
             resolve(result)
           }
@@ -261,6 +289,7 @@ export const useBaseStore = defineStore('base', {
         this.word.bookList.push(getDefaultDict(val))
         this.word.studyIndex = this.word.bookList.length - 1
       }
+      this.migrateLexiconFsrsCards(val.words)
     },
     //改变书籍
     async changeBook(val: Dict) {
