@@ -14,8 +14,9 @@
     "lexicon:runtime": "node scripts/build-lexicon-runtime.mjs",
     "lexicon:validate": "node scripts/validate-lexicon.mjs",
     "lexicon:check": "pnpm lexicon:runtime && pnpm lexicon:validate",
+    "test:lexicon-cards": "node --experimental-strip-types --test scripts/card-state.test.mjs",
     "zip-db": "node scripts/zip-lexicon.mjs",
-    "test": ""
+    "test": "pnpm test:lexicon-cards"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.4",
