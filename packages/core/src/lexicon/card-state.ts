@@ -1,11 +1,6 @@
 import type { Card } from 'ts-fsrs'
 import type { Dict, Word } from '../types'
-import {
-  buildSpellingCardId,
-  normalizeLegacyWordKey,
-  resolveLexicalUnitId,
-  type LexiconAwareWord,
-} from './index'
+import type { LexiconAwareWord } from './index'
 
 export const FSRS_CARD_STATE_VERSION = 2
 
@@ -37,13 +32,25 @@ export function getDefaultFsrsMigrationState(): FsrsMigrationState {
   }
 }
 
+function legacyKey(word: string): string {
+  return word.trim().normalize('NFKC').toLocaleLowerCase()
+}
+
+function lexicalUnitId(word: LexiconAwareWord): string {
+  return word.lexicalUnitId || word.lexiconMeta?.lexicalUnitId || `legacy:${legacyKey(word.word)}`
+}
+
+function stableSpellingCardKey(word: LexiconAwareWord): string {
+  return `${lexicalUnitId(word)}#spelling#${legacyKey(word.word)}`
+}
+
 export function practiceEntityKey(word: LexiconAwareWord): string {
-  return word.lexicalUnitId || word.lexiconMeta?.lexicalUnitId || `legacy:${normalizeLegacyWordKey(word.word)}`
+  return lexicalUnitId(word)
 }
 
 export function spellingCardKey(word: LexiconAwareWord): string {
-  if (word.lexicalUnitId || word.lexiconMeta?.lexicalUnitId) return buildSpellingCardId(word)
-  return normalizeLegacyWordKey(word.word)
+  if (word.lexicalUnitId || word.lexiconMeta?.lexicalUnitId) return stableSpellingCardKey(word)
+  return legacyKey(word.word)
 }
 
 export function collectLexiconWords(bookList: Dict[]): Word[] {
@@ -60,16 +67,16 @@ export function collectLexiconWords(bookList: Dict[]): Word[] {
 export function buildLegacyKeyGroups(words: Word[]): Map<string, Word[]> {
   const groups = new Map<string, Word[]>()
   for (const word of words) {
-    const legacyKey = normalizeLegacyWordKey(word.word)
-    const group = groups.get(legacyKey) ?? []
-    if (!group.some(item => resolveLexicalUnitId(item) === resolveLexicalUnitId(word))) group.push(word)
-    groups.set(legacyKey, group)
+    const key = legacyKey(word.word)
+    const group = groups.get(key) ?? []
+    if (!group.some(item => lexicalUnitId(item) === lexicalUnitId(word))) group.push(word)
+    groups.set(key, group)
   }
   return groups
 }
 
 function findLegacyCard(fsrsData: Record<string, Card>, word: Word): { key: string; card: Card } | null {
-  const candidates = [word.word, normalizeLegacyWordKey(word.word)]
+  const candidates = [word.word, legacyKey(word.word)]
   for (const key of candidates) {
     const card = fsrsData[key]
     if (card) return { key, card }
@@ -95,22 +102,22 @@ export function migrateLegacySpellingCards(
   migrationState.version = FSRS_CARD_STATE_VERSION
   migrationState.conflicts = {}
 
-  for (const [legacyKey, group] of groups) {
-    const unitIds = [...new Set(group.map(resolveLexicalUnitId))]
+  for (const [key, group] of groups) {
+    const unitIds = [...new Set(group.map(lexicalUnitId))]
     if (unitIds.length !== 1) {
       const conflict: FsrsMigrationConflict = {
-        legacyKey,
+        legacyKey: key,
         lexicalUnitIds: unitIds.sort(),
         displayForms: [...new Set(group.map(word => word.word))].sort(),
         reason: 'ambiguous-legacy-word-key',
       }
-      migrationState.conflicts[legacyKey] = conflict
+      migrationState.conflicts[key] = conflict
       conflicts.push(conflict)
       continue
     }
 
     const word = group[0]
-    const stableKey = buildSpellingCardId(word)
+    const stableKey = stableSpellingCardKey(word)
     if (fsrsData[stableKey]) {
       skippedExisting++
       continue
@@ -136,8 +143,7 @@ export function migrateBookListSpellingCards(
 }
 
 export function isLegacyKeyAmbiguous(migrationState: FsrsMigrationState | undefined, word: Word): boolean {
-  const legacyKey = normalizeLegacyWordKey(word.word)
-  return !!migrationState?.conflicts?.[legacyKey]
+  return !!migrationState?.conflicts?.[legacyKey(word.word)]
 }
 
 export function resolveFsrsCardEntry(
@@ -149,9 +155,7 @@ export function resolveFsrsCardEntry(
   const stableCard = fsrsData[stableKey]
   if (stableCard) return { key: stableKey, card: stableCard, legacy: false }
 
-  if (word.lexicalUnitId || word.lexiconMeta?.lexicalUnitId) {
-    if (isLegacyKeyAmbiguous(migrationState, word)) return null
-  }
+  if ((word.lexicalUnitId || word.lexiconMeta?.lexicalUnitId) && isLegacyKeyAmbiguous(migrationState, word)) return null
 
   const legacy = findLegacyCard(fsrsData, word)
   return legacy ? { key: legacy.key, card: legacy.card, legacy: true } : null
