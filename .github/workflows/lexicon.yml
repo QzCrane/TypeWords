@@ -8,8 +8,14 @@ on:
       - 'apps/nuxt/public/typewords_lexicon_v2/**'
       - 'packages/core/src/lexicon/**'
       - 'packages/core/src/types/types.ts'
+      - 'packages/core/src/stores/base.ts'
+      - 'packages/core/src/hooks/dict.ts'
+      - 'packages/core/src/composables/usePracticePersistence.ts'
+      - 'packages/core/src/utils/cache.ts'
+      - 'packages/core/src/config/env.ts'
       - 'scripts/build-lexicon-runtime.mjs'
       - 'scripts/validate-lexicon.mjs'
+      - 'scripts/card-state.test.mjs'
       - 'package.json'
       - 'apps/nuxt/package.json'
       - 'pnpm-lock.yaml'
@@ -23,8 +29,14 @@ on:
       - 'apps/nuxt/public/typewords_lexicon_v2/**'
       - 'packages/core/src/lexicon/**'
       - 'packages/core/src/types/types.ts'
+      - 'packages/core/src/stores/base.ts'
+      - 'packages/core/src/hooks/dict.ts'
+      - 'packages/core/src/composables/usePracticePersistence.ts'
+      - 'packages/core/src/utils/cache.ts'
+      - 'packages/core/src/config/env.ts'
       - 'scripts/build-lexicon-runtime.mjs'
       - 'scripts/validate-lexicon.mjs'
+      - 'scripts/card-state.test.mjs'
       - 'package.json'
       - 'apps/nuxt/package.json'
       - 'pnpm-lock.yaml'
@@ -65,5 +77,20 @@ jobs:
       - name: Build and validate lexicon runtime
         run: pnpm lexicon:check
 
+      - name: Run card migration fixtures
+        run: pnpm test:lexicon-cards
+
       - name: Build Nuxt application
-        run: pnpm -F @typewords/nuxt build
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm -F @typewords/nuxt build 2>&1 | tee nuxt-build.log
+
+      - name: Upload failed Nuxt build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lexicon-nuxt-build-log
+          path: nuxt-build.log
+          if-no-files-found: ignore
+          retention-days: 7
