@@ -6,7 +6,8 @@ type CacheConfig = { key: string; version: number }
 
 export const PRACTICE_WORD_CACHE: CacheConfig = {
   key: 'PracticeSaveWord',
-  version: 1,
+  // v2 stores stable practice entity keys in compact queue fields.
+  version: 2,
 }
 export const PRACTICE_ARTICLE_CACHE: CacheConfig = {
   key: 'PracticeSaveArticle',
@@ -19,6 +20,10 @@ export type PracticeWordCache = {
   statStoreData?: PracticeState
 }
 
+/**
+ * Historical field name retained for wire compatibility. In cache v2 these
+ * arrays contain stable practice entity keys; v1 contained exact word strings.
+ */
 export type PracticeWordTaskWordsStr = {
   new: string[]
   review: string[]
@@ -95,7 +100,7 @@ async function getLocal<T>(config: CacheConfig): Promise<T | null> {
   return null
 }
 
-async function setLocal<T>(config: CacheConfig, val: T | null, updated_at: string): Promise<void> {
+async function setLocal<T>(config: CacheConfig, val: T | null, updated_at?: string): Promise<void> {
   // idb 原生支持对象存储，直接存对象，无需 JSON.stringify
   const payload: LocalCacheResult<T> = {
     version: config.version,
