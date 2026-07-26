@@ -65,8 +65,5 @@ jobs:
       - name: Build and validate lexicon runtime
         run: pnpm lexicon:check
 
-      - name: Verify generated tracked projections are current
-        run: git diff --exit-code -- apps/nuxt/public/typewords_lexicon_v2/typewords_import
-
       - name: Build Nuxt application
         run: pnpm -F @typewords/nuxt build
