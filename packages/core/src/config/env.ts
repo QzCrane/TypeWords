@@ -72,7 +72,8 @@ export const APP_VERSION = {
 }
 export const SAVE_DICT_KEY = {
   key: 'typing-word-dict',
-  version: 4,
+  // v5 adds stable lexical-unit FSRS cards and explicit migration conflicts.
+  version: 5,
 }
 export const SAVE_SETTING_KEY = {
   key: 'typing-word-setting',
