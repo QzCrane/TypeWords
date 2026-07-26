@@ -1,0 +1,10 @@
+{
+  "cancel": {
+    "extraInfo": "编程高频词：用于取消异步请求（AbortController）、取消事件默认行为等场景",
+    "extraTags": ["编程高频词", "前端"]
+  },
+  "explosive": {
+    "extraInfo": "常用于描述爆炸性增长的数据或流量",
+    "extraTags": ["数据分析"]
+  }
+}

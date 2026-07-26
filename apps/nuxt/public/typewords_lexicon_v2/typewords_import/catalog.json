@@ -1,0 +1,65 @@
+[
+  {
+    "id": "S0_foundation_automatic",
+    "name": "S0_foundation_automatic",
+    "url": "S0_foundation_automatic.txt",
+    "length": 3759,
+    "language": "en",
+    "translateLanguage": "zh-CN",
+    "source": "typewords-lexicon-v2"
+  },
+  {
+    "id": "S1_core_automatic",
+    "name": "S1_core_automatic",
+    "url": "S1_core_automatic.txt",
+    "length": 2583,
+    "language": "en",
+    "translateLanguage": "zh-CN",
+    "source": "typewords-lexicon-v2"
+  },
+  {
+    "id": "S2_general_active",
+    "name": "S2_general_active",
+    "url": "S2_general_active.txt",
+    "length": 1988,
+    "language": "en",
+    "translateLanguage": "zh-CN",
+    "source": "typewords-lexicon-v2"
+  },
+  {
+    "id": "S3_academic_technical_active",
+    "name": "S3_academic_technical_active",
+    "url": "S3_academic_technical_active.txt",
+    "length": 2281,
+    "language": "en",
+    "translateLanguage": "zh-CN",
+    "source": "typewords-lexicon-v2"
+  },
+  {
+    "id": "S4_broad_receptive",
+    "name": "S4_broad_receptive",
+    "url": "S4_broad_receptive.txt",
+    "length": 7784,
+    "language": "en",
+    "translateLanguage": "zh-CN",
+    "source": "typewords-lexicon-v2"
+  },
+  {
+    "id": "S5_specialized_contextual",
+    "name": "S5_specialized_contextual",
+    "url": "S5_specialized_contextual.txt",
+    "length": 8197,
+    "language": "en",
+    "translateLanguage": "zh-CN",
+    "source": "typewords-lexicon-v2"
+  },
+  {
+    "id": "S6_on_demand",
+    "name": "S6_on_demand",
+    "url": "S6_on_demand.txt",
+    "length": 4618,
+    "language": "en",
+    "translateLanguage": "zh-CN",
+    "source": "typewords-lexicon-v2"
+  }
+]

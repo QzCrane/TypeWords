@@ -18,8 +18,8 @@ const map = {
     // API: 'http://localhost/',
     API: 'https://api.typewords.cc/',
     // RESOURCE_URL: 'https://dicts.2study.top/',
-    // RESOURCE_URL: '/',
-    RESOURCE_URL: 'https://files.typewords.cc/',
+    RESOURCE_URL: '/',
+    // RESOURCE_URL: 'https://files.typewords.cc/',
     // RESOURCE_URL: 'http://localhost/static/',
     LIBS_URL: 'https://libs.typewords.cc/',
   },
@@ -50,12 +50,12 @@ export const RESOURCE_PATH = ENV.API + 'static'
 
 export const DICT_LIST = {
   WORD: {
-    ALL: ENV.RESOURCE_URL + `/list/word.json`,
-    RECOMMENDED: ENV.RESOURCE_URL + `/list/recommend_word.json`,
+    ALL: ENV.RESOURCE_URL + `list/word.json`,
+    RECOMMENDED: ENV.RESOURCE_URL + `list/recommend_word.json`,
   },
   ARTICLE: {
-    ALL: ENV.RESOURCE_URL + `/list/article.json`,
-    RECOMMENDED: ENV.RESOURCE_URL + `/list/recommend_article.json`,
+    ALL: ENV.RESOURCE_URL + `list/article.json`,
+    RECOMMENDED: ENV.RESOURCE_URL + `list/recommend_article.json`,
   },
 }
 

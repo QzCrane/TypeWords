@@ -1,0 +1,49 @@
+{
+  "sourceBooks": 194,
+  "rawMemberships": 277529,
+  "lexicalUnits": 31951,
+  "searchKeys": 31915,
+  "caseSensitiveSearchKeysSplitIntoMultipleEntities": 28,
+  "evidenceVariants": 36989,
+  "tierCounts": {
+    "A1": 6369,
+    "A2": 4281,
+    "R1": 7804,
+    "R2": 8249,
+    "O": 4623,
+    "Q": 625
+  },
+  "unitTypeCounts": {
+    "lexeme_candidate": 24433,
+    "multiword_expression": 6827,
+    "abbreviation_candidate": 31,
+    "homograph_numbered_candidate": 35,
+    "artifact_candidate": 263,
+    "sentence_or_long_phrase": 358,
+    "digit_or_bundle_candidate": 4
+  },
+  "qualityStatusCounts": {
+    "conflicting_variants": 3740,
+    "unreviewed": 26794,
+    "detail_crosslink_quarantined": 792,
+    "quarantined_form": 625
+  },
+  "activeSystematicUnits": 10650,
+  "receptiveUnits": 16053,
+  "onDemandUnits": 4623,
+  "quarantineUnits": 625,
+  "highConfidenceFormLinks": 84,
+  "mediumConfidenceFormCandidates": 1950,
+  "independentStudyUnits": 31207,
+  "stageCountsIndependent": {
+    "S2_general_active": 1988,
+    "S6_on_demand": 4615,
+    "S5_specialized_contextual": 8197,
+    "S0_foundation_automatic": 3759,
+    "S4_broad_receptive": 7784,
+    "S3_academic_technical_active": 2281,
+    "S1_core_automatic": 2583
+  },
+  "identityPolicy": "case-insensitive search key; evidence-aware case-sensitive entity split; numbered homograph candidates preserved; URL-decoded before unit classification",
+  "sourceBoundary": "source-family categories are inferred from filenames for scheduling and do not prove official provenance or independent evidence"
+}

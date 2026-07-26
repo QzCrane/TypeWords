@@ -20,6 +20,8 @@ export function getDefaultWord(val: Partial<Word> = {}): Word {
       rels: [],
     },
     etymology: [],
+    extraInfo: '',
+    extraTags: [],
     ...val,
   }
 }

@@ -41,6 +41,9 @@ export type Word = {
     t: string //title
     d: string //desc
   }[]
+  /** 自定义扩展字段 */
+  extraInfo?: string
+  extraTags?: string[]
 }
 
 export type TranslateLanguageType = 'en' | 'zh-CN' | 'ja' | 'de' | 'common' | ''

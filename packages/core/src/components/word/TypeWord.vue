@@ -1112,6 +1112,19 @@ defineExpose({
             </div>
           </div>
         </template>
+
+        <template v-if="word?.extraInfo || word?.extraTags?.length">
+          <div class="line-white my-3"></div>
+          <div class="flex">
+            <div class="label">扩展信息</div>
+            <div class="text-base">
+              <div v-if="word.extraInfo" class="mb-1">{{ word.extraInfo }}</div>
+              <div v-if="word.extraTags?.length" class="flex gap-2 flex-wrap">
+                <span class="tag" v-for="tag in word.extraTags" :key="tag">{{ tag }}</span>
+              </div>
+            </div>
+          </div>
+        </template>
       </div>
     </div>
     <div
@@ -1204,6 +1217,12 @@ defineExpose({
 
   .pos {
     @apply min-w-10;
+  }
+
+  .tag {
+    @apply text-sm px-2 py-0.5 rounded;
+    background: var(--color-primary);
+    color: #fff;
   }
 
   .sentence {

@@ -39,3 +39,4 @@ report.html
 !.env.example
 public/vscode
 apps/TypeWordsMiniApp
+apps/nuxt/public/typewords_lexicon_v2/lexicon.sqlite
