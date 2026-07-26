@@ -2,6 +2,7 @@ import { DictType, Frequency, PracticeArticleWordType } from './enum'
 import type { Rating } from 'ts-fsrs'
 import { PRACTICE_ARTICLE_CACHE, PRACTICE_WORD_CACHE } from '../utils/cache'
 import { APP_VERSION } from '../config/env'
+import type { LexiconWordMeta } from '../lexicon'
 
 export type Word = {
   id?: string
@@ -41,6 +42,10 @@ export type Word = {
     t: string //title
     d: string //desc
   }[]
+  /** Stable identity in the normalized lexicon. Legacy words may omit it. */
+  lexicalUnitId?: string
+  /** Learning stage, quality, provenance counts, and prerequisite metadata. */
+  lexiconMeta?: LexiconWordMeta
   /** 自定义扩展字段 */
   extraInfo?: string
   extraTags?: string[]

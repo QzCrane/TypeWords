@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "description": "Traceable corrections applied at runtime without mutating the raw source-membership layer.",
+  "unitOverrides": {
+    "lu:fc7172dd6689ec94ba": {
+      "action": "alias",
+      "targetLexicalUnitId": "lu:8d49c2844b1b0d0a30",
+      "reason": "The source headword `gym\\nn` is a lemma followed by a newline POS tag, not a multiword expression."
+    },
+    "lu:eda5eacc52bd68b0f5": {
+      "action": "alias",
+      "targetLexicalUnitId": "lu:e3272a0a09a0122fde",
+      "reason": "The source headword `lab\\nn` is a lemma followed by a newline POS tag, not a multiword expression."
+    },
+    "lu:664ffa2f8419d95075": {
+      "action": "alias",
+      "targetLexicalUnitId": "lu:9b8f0871bb48089420",
+      "reason": "The source headword `mathematics\\nn` is a lemma followed by a newline POS tag, not a multiword expression."
+    }
+  }
+}

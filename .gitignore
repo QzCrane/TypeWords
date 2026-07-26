@@ -40,3 +40,4 @@ report.html
 public/vscode
 apps/TypeWordsMiniApp
 apps/nuxt/public/typewords_lexicon_v2/lexicon.sqlite
+apps/nuxt/public/typewords_lexicon_v2/runtime/

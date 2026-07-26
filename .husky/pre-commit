@@ -1,5 +1,8 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
+node scripts/build-lexicon-runtime.mjs
+node scripts/validate-lexicon.mjs
+git add apps/nuxt/public/typewords_lexicon_v2/typewords_import
 node scripts/zip-lexicon.mjs
 npm test
