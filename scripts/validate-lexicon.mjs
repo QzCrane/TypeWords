@@ -1,7 +1,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const root = path.resolve('apps/nuxt/public/typewords_lexicon_v2')
+const scriptDir = path.dirname(fileURLToPath(import.meta.url))
+const repositoryRoot = path.resolve(scriptDir, '..')
+const root = path.join(repositoryRoot, 'apps/nuxt/public/typewords_lexicon_v2')
 const sequencePath = path.join(root, 'learning_sequence.csv')
 const sourcesPath = path.join(root, 'sources_by_unit.jsonl')
 const correctionsPath = path.join(root, 'corrections.v1.json')
